@@ -1,5 +1,6 @@
 
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class SystemManager : MonoBehaviour
@@ -7,24 +8,29 @@ public class SystemManager : MonoBehaviour
     [Header("Image")]
     [SerializeField] private GameObject start_Image;
     [SerializeField] private GameObject loby_Iamage;
+    [SerializeField] private GameObject rolling_Image;
 
 
     [Header("Func")]
     [SerializeField] private Image backGround_Screen;
-    [SerializeField] private Button next_Btn;
+    [SerializeField] private PageSwiper passion_Open_Image;
     [SerializeField] private Button passion_Btn;
     [SerializeField] private Button photo_Btn;
     [SerializeField] private Button email_Btn;
+    public bool next_page = false;
 
 
-    private bool next_page = false;
-    private float fadeSpeed = 0.5f;
-    private float maxTransparency = 1f;
+    private bool SetPassion = false;
+    
+    private float fadeSpeed = 1f;
+    private float maxTransparency = 1.0f;
+    private float maxsetpassion = 1.0f;
     private float currentTransparency = 0f;
+    private float setpassion = 0f;
 
     private void Start()
     {
-        next_Btn.onClick.AddListener(OnClick_Next_Page);
+        
         passion_Btn.onClick.AddListener(OnClick_Passion);
         photo_Btn.onClick.AddListener(OnClick_Photo);
         email_Btn.onClick.AddListener(OnClick_Email);
@@ -33,16 +39,14 @@ public class SystemManager : MonoBehaviour
     private void Update()
     {
         On_Fade_BackGround();
-    }
-
-    public void OnClick_Next_Page()
-    {
-        next_page = true;
+        Passion_Open();
     }
 
     public void OnClick_Passion()
     {
-        Debug.Log("Passion 눌림");
+        Debug.Log($"Passion 눌림 : >>>{currentTransparency}");
+        
+        SetPassion = true;
     }
 
     public void OnClick_Photo()
@@ -54,6 +58,19 @@ public class SystemManager : MonoBehaviour
     {
         Debug.Log("Email 눌림");
     }
+
+
+    private void Passion_Open()
+    {
+        if(SetPassion)
+        {
+            rolling_Image.gameObject.SetActive(true);
+            setpassion += fadeSpeed * Time.deltaTime;
+            setpassion = Mathf.Clamp(setpassion, 0f, maxsetpassion);
+            SetPassion_Open(setpassion);
+        }
+    }
+
 
     private void On_Fade_BackGround()
     {
@@ -81,6 +98,15 @@ public class SystemManager : MonoBehaviour
         }
     }
 
+    void SetPassion_Open(float alpha)
+    {
+        if (backGround_Screen != null)
+        {
+            Color color = passion_Open_Image.displayImage.color;
+            color.a = alpha;
+            passion_Open_Image.displayImage.color = color;
+        }
+    }
 
     private void Loby_Set_Loby_Page()
     {
