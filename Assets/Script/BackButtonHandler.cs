@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class BackButtonHandler : MonoBehaviour
@@ -15,5 +13,16 @@ public class BackButtonHandler : MonoBehaviour
                 Application.Quit();
             }
         }
+    }
+
+    public void OnExitButtonPressed()
+    {
+#if UNITY_EDITOR
+        // Unity Editor에서 실행 중일 때는 종료 대신 에디터 정지
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+            // 실제 빌드 환경에서는 애플리케이션 종료
+            Application.Quit();
+#endif
     }
 }

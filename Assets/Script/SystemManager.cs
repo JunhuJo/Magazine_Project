@@ -1,7 +1,8 @@
-
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using System.Collections;
+
 
 public class SystemManager : MonoBehaviour
 {
@@ -21,7 +22,7 @@ public class SystemManager : MonoBehaviour
 
 
     private bool SetPassion = false;
-    
+    private bool lobyGO = false;
     private float fadeSpeed = 1f;
     private float maxTransparency = 1.0f;
     private float maxsetpassion = 1.0f;
@@ -30,10 +31,9 @@ public class SystemManager : MonoBehaviour
 
     private void Start()
     {
-        
-        passion_Btn.onClick.AddListener(OnClick_Passion);
-        photo_Btn.onClick.AddListener(OnClick_Photo);
-        email_Btn.onClick.AddListener(OnClick_Email);
+        //passion_Btn.onClick.AddListener(OnClick_Passion);
+        //photo_Btn.onClick.AddListener(OnClick_Photo);
+        //email_Btn.onClick.AddListener(OnClick_Email);
     }
 
     private void Update()
@@ -45,7 +45,7 @@ public class SystemManager : MonoBehaviour
     public void OnClick_Passion()
     {
         Debug.Log($"Passion 눌림 : >>>{currentTransparency}");
-        
+
         SetPassion = true;
     }
 
@@ -65,10 +65,23 @@ public class SystemManager : MonoBehaviour
         if(SetPassion)
         {
             rolling_Image.gameObject.SetActive(true);
-            setpassion += fadeSpeed * Time.deltaTime;
-            setpassion = Mathf.Clamp(setpassion, 0f, maxsetpassion);
-            SetPassion_Open(setpassion);
+            passion_Open_Image.gameObject.SetActive(true); // PageSwiper 스크립트가 붙은 오브젝트 활성화
+            StartCoroutine(StartFadeInCoroutine()); // PageSwiper의 초기 페이드 인 효과 호출
+            loby_Iamage.gameObject.SetActive(false);
+            next_page = false; // Loby_Set_Loby_Page가 호출되지 않도록 설정
+            SetPassion = false; // 한번만 실행되도록 설정
+
+            //rolling_Image.gameObject.SetActive(true);
+            //setpassion += fadeSpeed * Time.deltaTime;
+            //setpassion = Mathf.Clamp(setpassion, 0f, maxsetpassion);
+            //SetPassion_Open(setpassion);
         }
+    }
+
+    private IEnumerator StartFadeInCoroutine()
+    {
+        yield return new WaitForEndOfFrame(); // 한 프레임 대기
+        passion_Open_Image.StartFadeIn();
     }
 
 
@@ -93,7 +106,7 @@ public class SystemManager : MonoBehaviour
 
             if (color.a == 1)
             {
-                Loby_Set_Loby_Page();
+                First_Page_Start();
             }
         }
     }
@@ -108,10 +121,10 @@ public class SystemManager : MonoBehaviour
         }
     }
 
-    private void Loby_Set_Loby_Page()
+    private void First_Page_Start()
     {
-        start_Image.SetActive(false);
-        backGround_Screen.gameObject.SetActive(false);
-        loby_Iamage.gameObject.SetActive(true);
+       start_Image.SetActive(false);
+       backGround_Screen.gameObject.SetActive(false);
+       SetPassion = true;
     }
 }
