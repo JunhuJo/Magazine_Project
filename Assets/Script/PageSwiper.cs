@@ -9,13 +9,15 @@ public class PageSwiper : MonoBehaviour
     public Image displayImage; // 현재 이미지를 표시할 UI Image
     public Text endText; // 마지막 페이지에서 표시할 텍스트
 
-    private int currentImageIndex = 0;
+    public int currentImageIndex = 0;
     private Vector2 touchStartPos;
     private Vector2 touchCurrentPos;
     private bool isDragging = false;
     private float swipeThreshold = 100f; // 스와이프 감지 임계값
     private float animationDuration = 0.3f; // 애니메이션 지속 시간
     private bool isTransitioning = false; // 이미지 전환 중인지 여부
+    private bool isWaitingForSwipe = false; // 마지막 페이지에서 스와이프 대기 상태
+    private bool swipeOccurred = false; // 스와이프 발생 여부
 
     private void Start()
     {
@@ -32,6 +34,9 @@ public class PageSwiper : MonoBehaviour
         }
 
         endText.gameObject.SetActive(false); // 초기에는 숨김
+
+        // 이미지 크기를 화면 크기에 맞게 조정
+        AdjustImageSize();
     }
 
     public void StartFadeIn()
@@ -40,8 +45,18 @@ public class PageSwiper : MonoBehaviour
         {
             displayImage.sprite = images[currentImageIndex];
             displayImage.canvasRenderer.SetAlpha(0.0f);
+            AdjustImageSize(); // 새 이미지에 맞게 조정
             StartCoroutine(FadeInInitialImage());
         }
+    }
+
+    private void AdjustImageSize()
+    {
+        RectTransform rt = displayImage.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0, 0);
+        rt.anchorMax = new Vector2(1, 1);
+        rt.offsetMin = new Vector2(0, 200); // 아래쪽 공백 50픽셀
+        rt.offsetMax = new Vector2(0, -200); // 위쪽 공백 50픽셀
     }
 
     private IEnumerator FadeInInitialImage()
@@ -60,6 +75,38 @@ public class PageSwiper : MonoBehaviour
     void Update()
     {
         if (isTransitioning) return; // 이미지 전환 중일 때는 입력을 받지 않음
+
+        if (isWaitingForSwipe)
+        {
+            if (Input.touchCount > 0)
+            {
+                Touch touch = Input.GetTouch(0);
+
+                if (touch.phase == TouchPhase.Began)
+                {
+                    touchStartPos = touch.position;
+                    isDragging = true;
+                }
+                else if (touch.phase == TouchPhase.Moved && isDragging)
+                {
+                    touchCurrentPos = touch.position;
+                }
+                else if (touch.phase == TouchPhase.Ended)
+                {
+                    isDragging = false;
+                    float swipeDistance = touchCurrentPos.x - touchStartPos.x;
+
+                    if (swipeDistance < -swipeThreshold) // 왼쪽으로 스와이프
+                    {
+                        // 왼쪽으로 스와이프하여 첫 번째 화면으로 이동
+                        isWaitingForSwipe = false;
+                        currentImageIndex = 0;
+                        StartCoroutine(FadeOutAndIn());
+                    }
+                }
+            }
+            return; // 스와이프 대기 중일 때는 나머지 입력을 처리하지 않음
+        }
 
         if (Input.touchCount > 0)
         {
@@ -93,6 +140,7 @@ public class PageSwiper : MonoBehaviour
 
         if (Mathf.Abs(swipeDistance) > swipeThreshold)
         {
+            swipeOccurred = true;
             if (swipeDistance > 0)
             {
                 // 오른쪽으로 스와이프
@@ -104,6 +152,10 @@ public class PageSwiper : MonoBehaviour
                 ShowNextImage();
             }
         }
+        else
+        {
+            swipeOccurred = false;
+        }
     }
 
     private void ShowPreviousImage()
@@ -112,27 +164,46 @@ public class PageSwiper : MonoBehaviour
         {
             currentImageIndex--;
             endText.gameObject.SetActive(false); // 첫 이미지에서 마지막 페이지 텍스트 숨김
-            StartCoroutine(FadeOutAndIn());
         }
         else
         {
             currentImageIndex = images.Length - 1; // 첫 이미지에서 왼쪽으로 스와이프 시 마지막 이미지로 이동
-            StartCoroutine(FadeOutAndIn());
         }
+        StartCoroutine(FadeOutAndIn());
     }
 
     private void ShowNextImage()
     {
-        if (currentImageIndex < images.Length - 1)
+        if (currentImageIndex < images.Length - 1 && swipeOccurred)
         {
             currentImageIndex++;
             endText.gameObject.SetActive(false); // 마지막 이미지가 아닌 경우 텍스트 숨김
         }
-        else
+        else if(currentImageIndex == images.Length - 1)
         {
-            endText.gameObject.SetActive(true); // 마지막 이미지일 경우 텍스트 표시
+            StartCoroutine(ShowEndTextAndWaitForSwipe()); // 텍스트 표시 후 스와이프 대기 코루틴 시작
+            return;
         }
         StartCoroutine(FadeOutAndIn());
+    }
+
+    private IEnumerator ShowEndTextAndWaitForSwipe()
+    {
+        endText.gameObject.SetActive(true); // 텍스트 활성화
+        endText.canvasRenderer.SetAlpha(0.0f); // 텍스트의 초기 알파값을 0으로 설정
+
+        float elapsedTime = 0f;
+
+        // 텍스트 페이드인
+        while (elapsedTime < animationDuration)
+        {
+            elapsedTime += Time.deltaTime;
+            float alpha = Mathf.Lerp(0, 1, elapsedTime / animationDuration);
+            endText.canvasRenderer.SetAlpha(alpha);
+            yield return null;
+        }
+
+        isWaitingForSwipe = true; // 스와이프 대기 상태로 설정
     }
 
     private IEnumerator FadeOutAndIn()
@@ -152,6 +223,7 @@ public class PageSwiper : MonoBehaviour
 
         // 이미지를 교체
         displayImage.sprite = images[currentImageIndex];
+        AdjustImageSize(); // 새로운 이미지 크기를 화면 크기에 맞게 조정
         displayImage.canvasRenderer.SetAlpha(0.0f);
 
         // 새로운 이미지를 페이드 인
