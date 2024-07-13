@@ -6,7 +6,10 @@ using System.Collections;
 public class PageSwiper : MonoBehaviour
 {
     public Sprite[] images; // 이미지 배열
+    public string[] descriptions; // 이미지 설명 배열
     public Image displayImage; // 현재 이미지를 표시할 UI Image
+    public Text pageNumberText; // 페이지 번호를 표시할 텍스트
+    public Text descriptionText; // 설명을 표시할 텍스트
     public Text endText; // 마지막 페이지에서 표시할 텍스트
 
     public int currentImageIndex = 0;
@@ -14,10 +17,13 @@ public class PageSwiper : MonoBehaviour
     private Vector2 touchCurrentPos;
     private bool isDragging = false;
     private float swipeThreshold = 100f; // 스와이프 감지 임계값
-    private float animationDuration = 0.3f; // 애니메이션 지속 시간
+    private float animationDuration = 0.3f; // 이미지 전환 애니메이션 지속 시간
+    private float descriptionAnimationDuration = 1.0f; // 설명 텍스트 애니메이션 지속 시간
     private bool isTransitioning = false; // 이미지 전환 중인지 여부
     private bool isWaitingForSwipe = false; // 마지막 페이지에서 스와이프 대기 상태
     private bool swipeOccurred = false; // 스와이프 발생 여부
+    private Coroutine descriptionCoroutine; // 설명 텍스트 애니메이션 코루틴
+    private Vector2 descriptionStartPos; // 설명 텍스트의 초기 위치
 
     private void Start()
     {
@@ -33,7 +39,29 @@ public class PageSwiper : MonoBehaviour
             endText = GameObject.Find("EndText").GetComponent<Text>();
         }
 
+        // pageNumberText와 descriptionText가 설정되지 않은 경우 자동으로 설정
+        if (pageNumberText == null)
+        {
+            pageNumberText = GameObject.Find("PageNumberText").GetComponent<Text>();
+        }
+
+        if (descriptionText == null)
+        {
+            descriptionText = GameObject.Find("DescriptionText").GetComponent<Text>();
+        }
+
         endText.gameObject.SetActive(false); // 초기에는 숨김
+
+        // 이미지 배열의 길이에 맞게 descriptions 배열 초기화
+        if (descriptions == null || descriptions.Length != images.Length)
+        {
+            descriptions = new string[images.Length];
+        }
+
+        // 설명 텍스트의 초기 위치 저장
+        descriptionStartPos = descriptionText.GetComponent<RectTransform>().anchoredPosition;
+
+        UpdatePageInfo(); // 페이지 정보 업데이트
 
         // 이미지 크기를 화면 크기에 맞게 조정
         AdjustImageSize();
@@ -101,6 +129,7 @@ public class PageSwiper : MonoBehaviour
                         // 왼쪽으로 스와이프하여 첫 번째 화면으로 이동
                         isWaitingForSwipe = false;
                         currentImageIndex = 0;
+                        UpdatePageInfo(); // 페이지 정보 업데이트
                         StartCoroutine(FadeOutAndIn());
                     }
                 }
@@ -169,6 +198,7 @@ public class PageSwiper : MonoBehaviour
         {
             currentImageIndex = images.Length - 1; // 첫 이미지에서 왼쪽으로 스와이프 시 마지막 이미지로 이동
         }
+        UpdatePageInfo(); // 페이지 정보 업데이트
         StartCoroutine(FadeOutAndIn());
     }
 
@@ -179,11 +209,12 @@ public class PageSwiper : MonoBehaviour
             currentImageIndex++;
             endText.gameObject.SetActive(false); // 마지막 이미지가 아닌 경우 텍스트 숨김
         }
-        else if(currentImageIndex == images.Length - 1)
+        else if (currentImageIndex == images.Length - 1)
         {
             StartCoroutine(ShowEndTextAndWaitForSwipe()); // 텍스트 표시 후 스와이프 대기 코루틴 시작
             return;
         }
+        UpdatePageInfo(); // 페이지 정보 업데이트
         StartCoroutine(FadeOutAndIn());
     }
 
@@ -237,5 +268,56 @@ public class PageSwiper : MonoBehaviour
         }
 
         isTransitioning = false; // 이미지 전환 완료
+    }
+
+    private void UpdatePageInfo()
+    {
+        pageNumberText.text = "Page " + (currentImageIndex + 1) + " of " + images.Length;
+        if (descriptions.Length > currentImageIndex)
+        {
+            if (descriptionCoroutine != null)
+            {
+                StopCoroutine(descriptionCoroutine);
+            }
+
+            // 설명 텍스트의 위치를 초기 위치로 재설정
+            RectTransform rectTransform = descriptionText.GetComponent<RectTransform>();
+            rectTransform.anchoredPosition = descriptionStartPos;
+
+            // 유니티 에디터에서 입력된 문자열에서 \n을 실제 줄바꿈 문자로 변환
+            string formattedDescription = descriptions[currentImageIndex].Replace("\\n", "\n");
+            Debug.Log("Formatted Description: " + formattedDescription); // 디버깅 출력
+
+            descriptionText.text = formattedDescription;
+            descriptionCoroutine = StartCoroutine(FadeInDescription(formattedDescription));
+        }
+        else
+        {
+            descriptionText.text = ""; // 설명이 없는 경우 빈 텍스트 설정
+        }
+    }
+
+    private IEnumerator FadeInDescription(string text)
+    {
+        descriptionText.text = text;
+        RectTransform rectTransform = descriptionText.GetComponent<RectTransform>();
+        Vector2 startPos = descriptionStartPos;
+        Vector2 endPos = startPos + new Vector2(0, 20); // 20 픽셀 위로 이동
+        float elapsedTime = 0f;
+
+        descriptionText.canvasRenderer.SetAlpha(0.0f); // 초기 알파값을 0으로 설정
+        rectTransform.anchoredPosition = startPos;
+
+        while (elapsedTime < descriptionAnimationDuration)
+        {
+            elapsedTime += Time.deltaTime;
+            float alpha = Mathf.Lerp(0, 1, elapsedTime / descriptionAnimationDuration);
+            float yPos = Mathf.Lerp(startPos.y, endPos.y, elapsedTime / descriptionAnimationDuration);
+            rectTransform.anchoredPosition = new Vector2(startPos.x, yPos);
+            descriptionText.canvasRenderer.SetAlpha(alpha);
+            yield return null;
+        }
+
+        rectTransform.anchoredPosition = endPos;
     }
 }
