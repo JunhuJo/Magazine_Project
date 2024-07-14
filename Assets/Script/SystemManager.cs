@@ -14,13 +14,7 @@ public class SystemManager : MonoBehaviour
     [Header("Func")]
     [SerializeField] private Image backGround_Screen;
     [SerializeField] private PageSwiper passion_Open_Image;
-    [SerializeField] private Button passion_Btn;
-    [SerializeField] private Button photo_Btn;
-    [SerializeField] private Button email_Btn;
     public bool next_page = false;
-
-    [Header("Exit UI")]
-    [SerializeField] private GameObject exitConfirmationUI;
 
     private bool SetPassion = false;
     private bool lobyGO = false;
@@ -30,28 +24,10 @@ public class SystemManager : MonoBehaviour
     private float currentTransparency = 0f;
     private float setpassion = 0f;
 
-    private bool isExitConfirmationActive = false;
-
     private void Update()
     {
         On_Fade_BackGround();
         Passion_Open();
-
-        // 뒤로가기 버튼 처리
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            HandleBackButton();
-        }
-    }
-
-    private void HandleBackButton()
-    {
-        if (isExitConfirmationActive)
-        {
-            return; // 종료 확인 UI가 활성화된 상태에서는 추가적인 입력을 무시
-        }
-
-        ShowExitConfirmationUI();
     }
 
     public void OnClick_Passion()
@@ -120,31 +96,5 @@ public class SystemManager : MonoBehaviour
         start_Image.SetActive(false);
         backGround_Screen.gameObject.SetActive(false);
         SetPassion = true;
-    }
-
-    // 종료 확인 UI를 표시하는 메서드
-    private void ShowExitConfirmationUI()
-    {
-        exitConfirmationUI.SetActive(true);
-        isExitConfirmationActive = true;
-    }
-
-    // 종료 확인 UI를 숨기는 메서드
-    private void HideExitConfirmationUI()
-    {
-        exitConfirmationUI.SetActive(false);
-        isExitConfirmationActive = false;
-    }
-
-    // 종료 확인 UI에서 "예" 버튼을 눌렀을 때 호출되는 메서드
-    public void OnClick_ExitYes()
-    {
-        Application.Quit();
-    }
-
-    // 종료 확인 UI에서 "아니오" 버튼을 눌렀을 때 호출되는 메서드
-    public void OnClick_ExitNo()
-    {
-        HideExitConfirmationUI();
     }
 }
